@@ -9,8 +9,9 @@ from collections import Counter, defaultdict
 import os
 import json
 if "firebase_app" not in st.session_state:
-    cred = credentials.Certificate("task-allocator-17f79-firebase-adminsdk-fbsvc-7db86ff117.json")
-    firebase-admin.initialize_app(cred)
+    firebase_cert = json.loads(os.environ["FIREBASE_CREDENTIALS"])
+    cred = credentials.Certificate(firebase_cert)
+    firebase_admin.initialize_app(cred)
     st.session_state.firebase_app = True
 
 db = firestore.client()
