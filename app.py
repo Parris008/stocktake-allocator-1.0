@@ -8,8 +8,9 @@ import json
 
 # Firebase init
 if "firebase_app" not in st.session_state:
-    cred = credentials.Certificate("firebase_key.json")
-    firebase_admin.initialize_app(cred)
+    if not firebase_admin._apps:
+        cred = credentials.Certificate("firebase_key.json")
+        firebase_admin.initialize_app(cred)
     st.session_state.firebase_app = True
 
 db = firestore.client()
@@ -63,10 +64,7 @@ if view_mode == "Lead View":
             task_data = task.to_dict()
             task_data["assigned_to"] = person
             task_data["status"] = "pending"
-            task_list.append(task_data)
-
-        for i, task in enumerate(task_list):
-            db.collection("tasks").document(str(i)).set(task)
+            db.collection("tasks").document(task_data["id"]).set(task_data)
 
         st.success("Tasks allocated.")
 
@@ -99,5 +97,4 @@ elif view_mode == "Team Member View":
             done = len(task_df[(task_df["assigned_to"] == selected_name) & (task_df["status"] == "complete")])
             progress = done / total if total > 0 else 0
             st.progress(progress)
-
 
