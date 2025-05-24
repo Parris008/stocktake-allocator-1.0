@@ -9,8 +9,7 @@ from collections import Counter, defaultdict
 import os
 import json
 if "firebase_app" not in st.session_state:
-    firebase_cert = json.loads(os.environ["FIREBASE_CREDENTIALS"])
-    cred = credentials.Certificate(firebase_cert)
+    cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
     st.session_state.firebase_app = True
 
