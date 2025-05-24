@@ -6,7 +6,7 @@ import datetime
 import os
 import json
 
-# Firebase init
+# Firebase init with safe check
 if "firebase_app" not in st.session_state:
     if not firebase_admin._apps:
         cred = credentials.Certificate("firebase_key.json")
@@ -15,8 +15,8 @@ if "firebase_app" not in st.session_state:
 
 db = firestore.client()
 
-st.set_page_config(page_title="Task Allocator + Tracker", layout="wide")
-st.title("Task Allocator and Team Tracker")
+st.set_page_config(page_title="Task Allocator + Tracker (DEBUG)", layout="wide")
+st.title("Task Allocator and Team Tracker - DEBUG MODE")
 
 view_mode = st.radio("Select View", ["Lead View", "Team Member View"])
 
@@ -31,23 +31,31 @@ if view_mode == "Lead View":
     team_file = st.file_uploader("Upload Team File (CSV)", type="csv", key="team")
 
     if st.button("Allocate Tasks") and task_file and team_file:
+        st.write("Reading CSV files...")
         tasks = pd.read_csv(task_file)
         team = pd.read_csv(team_file)
 
+        st.write(f"Loaded {len(tasks)} tasks and {len(team)} team members.")
+
+        st.write("Clearing existing Firestore collections...")
         for t in db.collection("tasks").stream():
             db.collection("tasks").document(t.id).delete()
         for m in db.collection("team").stream():
             db.collection("team").document(m.id).delete()
 
+        st.write("Uploading team data to Firestore...")
         for _, row in team.iterrows():
             db.collection("team").document(row["name"]).set(row.to_dict())
 
         tasks = tasks.sort_values(by="priority", ascending=False)
+        st.write("Sorted tasks by priority.")
 
         task_list = []
         team_cycle = iter(team["name"].tolist())
         assigned_first = {}
+        skipped = 0
 
+        st.write("Assigning tasks...")
         for _, task in tasks.iterrows():
             try:
                 person = next(team_cycle)
@@ -58,6 +66,8 @@ if view_mode == "Lead View":
             speed = float(team[team["name"] == person]["speed"].values[0])
             if person not in assigned_first:
                 if task["difficulty"] >= 4 and speed < 1:
+                    st.write(f"Skipped assigning task {task['id']} to {person} due to difficulty.")
+                    skipped += 1
                     continue
                 assigned_first[person] = True
 
@@ -65,7 +75,9 @@ if view_mode == "Lead View":
             task_data["assigned_to"] = person
             task_data["status"] = "pending"
             db.collection("tasks").document(task_data["id"]).set(task_data)
+            st.write(f"Assigned task {task_data['id']} to {person}")
 
+        st.write(f"Finished assigning. Total skipped tasks: {skipped}")
         st.success("Tasks allocated.")
 
 elif view_mode == "Team Member View":
@@ -97,4 +109,3 @@ elif view_mode == "Team Member View":
             done = len(task_df[(task_df["assigned_to"] == selected_name) & (task_df["status"] == "complete")])
             progress = done / total if total > 0 else 0
             st.progress(progress)
-
