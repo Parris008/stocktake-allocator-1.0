@@ -45,29 +45,24 @@ if view_mode == "Lead View":
         freezer = tasks[tasks["priority"] == "fz"]
         dairy = tasks[tasks["priority"] == "dy"]
         other = tasks[~tasks["priority"].isin(["fz", "dy"])]
-        zone_groups = other.groupby("zone")
+        task_list = pd.concat([freezer, dairy, other])
 
-        # Round-robin assign after freezer/dairy
-        task_list = []
-        for df in [freezer, dairy]:
-            task_list.extend(df.to_dict("records"))
-
-        team_zones = [z for z in zone_groups.groups]
+        # Assign team round-robin
         team_cycle = iter(team["name"].tolist())
-
-        for zone, group in zone_groups:
-            for _, row in group.iterrows():
-                try:
-                    person = next(team_cycle)
-                except StopIteration:
-                    team_cycle = iter(team["name"].tolist())
-                    person = next(team_cycle)
-                row["assigned_to"] = person
-                task_list.append(row.to_dict())
+        assignments = []
+        for _, task in task_list.iterrows():
+            try:
+                person = next(team_cycle)
+            except StopIteration:
+                team_cycle = iter(team["name"].tolist())
+                person = next(team_cycle)
+            task_data = task.to_dict()
+            task_data["assigned_to"] = person
+            task_data["status"] = "pending"
+            assignments.append(task_data)
 
         # Upload tasks
-        for i, task in enumerate(task_list):
-            task["status"] = "pending"
+        for i, task in enumerate(assignments):
             db.collection("tasks").document(str(i)).set(task)
 
         st.success("Tasks allocated and uploaded to Firebase.")
@@ -104,5 +99,4 @@ elif view_mode == "Team Member View":
                 st.rerun()
 
             st.progress((1 - len(tasks) / len(task_df[task_df["assigned_to"] == selected_name])) * 100)
-
 
