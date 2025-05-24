@@ -8,7 +8,7 @@ import datetime
 
 if "firebase_app" not in st.session_state:
     firebase_cert = json.loads(os.environ["FIREBASE_CREDENTIALS"])
-    cred = credentials.Certificate(firebase_cert)
+    cred = credentials.Certificate(firebase_key.json)
     firebase_admin.initialize_app(cred, name="stocktake_allocator")
     st.session_state.firebase_app = True
     
