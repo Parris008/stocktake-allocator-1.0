@@ -8,10 +8,10 @@ import datetime
 
 if "firebase_app" not in st.session_state:
     firebase_cert = json.loads(os.environ["FIREBASE_CREDENTIALS"])
-    cred = credentials.Certificate("firebase_key.json")
+    cred = credentials.Certificate(firebase_cert)
     firebase_admin.initialize_app(cred, name="stocktake_allocator")
     st.session_state.firebase_app = True
-
+    
 db = firestore.client()
 
 st.set_page_config(page_title="Task Allocator & Team Tracker", layout="wide")
