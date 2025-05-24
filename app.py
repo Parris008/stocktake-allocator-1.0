@@ -4,10 +4,10 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import datetime
 
-# Firebase setup
 if "firebase_app" not in st.session_state:
-    cred = credentials.Certificate("firebase_key.json")
-    firebase_admin.initialize_app(cred)
+    firebase_cert = json.loads(os.environ["FIREBASE_CREDENTIALS"])
+    cred = credentials.Certificate(firebase_cert)
+    firebase_admin.initialize_app(cred, name="stocktake_allocator")
     st.session_state.firebase_app = True
 
 db = firestore.client()
