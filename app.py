@@ -56,3 +56,4 @@ elif view_mode == "Team Member View":
                 db.collection("tasks").document(task["id"]).update({"status": "complete"})
                 st.success(f"{task['id']} marked as complete!")
 
+
