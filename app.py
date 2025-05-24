@@ -10,10 +10,8 @@ import os
 import json
 firebase_cert = json.loads(os.environ["FIREBASE_CREDENTIALS"])
 cred = credentials.Certificate(firebase_cert)
-try:
-   firebase_admin.get_app()
-except ValueError:
-   firebase_admin.initialize_app(cred)
+try: firebase_admin.get_app()
+except ValueError: firebase_admin.initialize_app(cred)
 st.session_state.firebase_app = True
 
 db = firestore.client()
