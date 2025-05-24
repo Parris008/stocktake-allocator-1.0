@@ -1,5 +1,4 @@
-{
-  "type": "service_account",
+{ "type": "service_account",
   "project_id": "task-allocator-17f79",
   "private_key_id": "b22d6884c6ca9129177b81bd1e9fde1767437a9f",
   "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCmziTGBNzF7Pa9\nP8OlYV880QnnRiC/uz/4mOL0FRdcm9rKNxoNJ0RPcuZ332h+mALqip8bHSsr+gwW\nTkpSaly8iJ7WUliMEVW5gmHv10q0JiK+iXkAe2h/OjOtvVRqvekoX2rbQ3jbQg/k\nHAmMpuiUF2gI5QetIXYQ+XTgM3bU+wV3JyanVxzppAlEbldYSbbl55Hjz2dE9vNn\nA0siVFtNFDGtVFdDqJw9ouyo5URdL84CcY1finH5lJC6v85AFA9rIq/jOClgbXyF\n9vPpYF2y2cPgKfdhVsOTfwogcmPPetPu/xZZ07YWM45SfaQB/XIfstBBlxJ7csCm\nJ8Bi1baxAgMBAAECggEAGp/HrdWj2XGntnBBjZmbpmzlLEV8v62nGcppWzUsm+sC\ngolF/rh4RkgcMiD2IFKqEH6cw6qls+i+2iaX5Uy1zZ/u3l2ZZY30xV3ivPH7qgJ2\nRDxUFHgeJ0SGcCJKoZj7aKbGOwYrea+zMqEpAwq3D8AmqljIH2G6Yx42Af0k5/yA\n+jrS6JRHdUBG27qNQ3Vbc972eP+Wgv++F3gTeVfKw7pLNsPkP448QlPx/F4CVHLt\nDS/8Ewbw+qIyLTYhnxR4tg0DtZJF156x2ZMF8iciRFljpBcZS8x4+ZXWHV5SXUXm\nS7oi9WGOc98jLRKtCbWZkBa2oa+I67rdMRGQdFnaowKBgQDcSTRNlot5BjUwlCAZ\nwwz21LPzQophJfrTNJbOr24e9ro9CzsLnA+aCIAlbmK41PwFCMPtQtuNWJWI/WtZ\nm6ZF3Is14QwcFFyY2fxhG1ha4ew+8ezDuS0Qa2zXPw3NDCYhWc0iOKa/K+Bn0qfv\nr+02K7/OdhK/3vei304tRw0RjwKBgQDB2UO9dmDdDn/wK6CazOkURfSOd2tWD11n\nXx6gafXPZSsaerHV5E2sR//iX6wesHdkSmCKkDIIFqVdoUB3G+EfHTcFpkB6Ds8h\njrZRVc4+kUHnB/21li5OaXSTTJL1p6IXgaSRhwHrqNUy5uszgne5UtYsIsJVsDlC\n52rPJ7gTvwKBgCFqBUIDpPJdq7HLtjbSLGRAjW9H15+22B4zavC9EZIm0Mczregr\n6v3tbiq/XMA2pmfJFZcmvhDpr/0Qm7kC8CzGsGMi2OhlekpBPpQoRrW6cVB29/gU\nXa6Q7PiVeu1we1Qxv/kB6OE0sZxuCsVDxVKjPjv+EwgBtUSCZORfU68nAoGAT6nv\nGcytcAtGbrgvL47odqltIKNZHCwCUboYhwokt8+20BH+RY2mkhegxDJXNOGGn1Ol\nqywpM4PC/+CF8q0lbjj+ZLb3JnIxk3Pn3zMpKDNf5wc0r8yBST4zZ1l/x67VgV2I\n+TmHg4aF335gyHFkrGerlsXOIZLjZWhfT7TeBFcCgYAsWNJG13uOj2DLlryzJHMm\nQD0tjaX7as8CwA9ul7e9tvxwtNxsT7OpsvqrILK2QT2wrKEYBnQno3aqV7wtpYra\n94iqYb/38FQkexuVnpfjWwqs+QoDOqOu/QoubesZXda9rDC4LR2AEuTjI2PtaDAn\nwraBEJDX79y2rSliTAeh/w==\n-----END PRIVATE KEY-----\n",
@@ -9,5 +8,4 @@
   "token_uri": "https://oauth2.googleapis.com/token",
   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40task-allocator-17f79.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
+  "universe_domain": "googleapis.com"}
