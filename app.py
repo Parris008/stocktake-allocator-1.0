@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-ipmort os
+import os
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
