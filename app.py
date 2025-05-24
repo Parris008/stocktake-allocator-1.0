@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import firebase_admin
@@ -34,23 +33,20 @@ if view_mode == "Lead View":
         tasks = pd.read_csv(task_file)
         team = pd.read_csv(team_file)
 
-        # Clear Firestore
         for t in db.collection("tasks").stream():
             db.collection("tasks").document(t.id).delete()
         for m in db.collection("team").stream():
             db.collection("team").document(m.id).delete()
 
-        # Upload team
         for _, row in team.iterrows():
             db.collection("team").document(row["name"]).set(row.to_dict())
 
-        # Sort tasks by priority
         tasks = tasks.sort_values(by="priority", ascending=False)
 
-        # Assign round-robin with performance filter on first task
         task_list = []
         team_cycle = iter(team["name"].tolist())
-        assigned = {}
+        assigned_first = {}
+
         for _, task in tasks.iterrows():
             try:
                 person = next(team_cycle)
@@ -58,18 +54,17 @@ if view_mode == "Lead View":
                 team_cycle = iter(team["name"].tolist())
                 person = next(team_cycle)
 
-            multiplier = float(team[team["name"] == person]["performance_multiplier"].values[0])
-            if person not in assigned:
-                if task["priority"] >= 4 and multiplier < 1:
-                    continue  # skip assigning hard first task to low performer
-                assigned[person] = True
+            speed = float(team[team["name"] == person]["speed"].values[0])
+            if person not in assigned_first:
+                if task["difficulty"] >= 4 and speed < 1:
+                    continue
+                assigned_first[person] = True
 
             task_data = task.to_dict()
             task_data["assigned_to"] = person
             task_data["status"] = "pending"
             task_list.append(task_data)
 
-        # Upload tasks
         for i, task in enumerate(task_list):
             db.collection("tasks").document(str(i)).set(task)
 
@@ -89,8 +84,8 @@ elif view_mode == "Team Member View":
             st.success("All tasks completed!")
         else:
             current = tasks.iloc[0]
-            st.subheader(f"Current Task: {current['location']}")
-            st.write(f"Priority: {current['priority']} | Time: {current['estimated_time']}")
+            st.subheader(f"Current Task: {current['id']}")
+            st.write(f"Priority: {current['priority']}, Time: {current['time']} mins, Difficulty: {current['difficulty']}")
 
             if st.button("Mark as Complete"):
                 db.collection("tasks").document(str(current["id"])).update({
