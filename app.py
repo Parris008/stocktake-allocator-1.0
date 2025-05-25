@@ -1,109 +1,85 @@
 import streamlit as st
 import pandas as pd
-import firebase_admin
-from firebase_admin import credentials, firestore
+import time
 import datetime
-import os
-import json
 
-# Firebase initialization
-if "firebase_app" not in st.session_state:
-    if not firebase_admin._apps:
-        cred = credentials.Certificate("firebase_key.json")
-        firebase_admin.initialize_app(cred)
-    st.session_state.firebase_app = True
-
-db = firestore.client()
-
-st.set_page_config(page_title="Task Allocator + Tracker", layout="wide")
-st.title("Task Allocator and Team Tracker (DEBUG MODE)")
+st.set_page_config(page_title="Offline Task Allocator", layout="wide")
+st.title("Offline Task Allocator & Tracker")
 
 view_mode = st.radio("Select View", ["Lead View", "Team Member View"])
 
-def load_data():
-    tasks = [doc.to_dict() | {"id": doc.id} for doc in db.collection("tasks").stream()]
-    team = [doc.to_dict() | {"name": doc.id} for doc in db.collection("team").stream()]
-    return pd.DataFrame(tasks), pd.DataFrame(team)
-
 if view_mode == "Lead View":
-    st.header("Lead View")
-    task_file = st.file_uploader("Upload Task File (CSV)", type="csv", key="tasks")
-    team_file = st.file_uploader("Upload Team File (CSV)", type="csv", key="team")
+    st.header("Lead View - Allocate Tasks")
+    tasks_file = st.file_uploader("Upload Task File (CSV)", type="csv")
+    team_file = st.file_uploader("Upload Team File (CSV)", type="csv")
 
-    if st.button("Allocate Tasks") and task_file and team_file:
-        st.write("Reading CSV files...")
-        tasks = pd.read_csv(task_file)
-        team = pd.read_csv(team_file)
+    if st.button("Allocate Tasks") and tasks_file and team_file:
+        tasks_df = pd.read_csv(tasks_file)
+        team_df = pd.read_csv(team_file)
 
-        st.write(f"Loaded {len(tasks)} tasks and {len(team)} team members.")
+        tasks_df = tasks_df.sort_values(by=["priority", "difficulty"], ascending=[False, False])
+        team_df["capacity"] = team_df["speed"] * 300  # 5 hours in minutes
+        assignments = {name: [] for name in team_df["name"]}
+        capacities = dict(zip(team_df["name"], team_df["capacity"]))
 
-        st.write("Clearing Firestore...")
-        for t in db.collection("tasks").stream():
-            db.collection("tasks").document(t.id).delete()
-        for m in db.collection("team").stream():
-            db.collection("team").document(m.id).delete()
+        for _, task in tasks_df.iterrows():
+            for name in capacities:
+                if capacities[name] >= task["time"]:
+                    assignments[name].append(task.to_dict())
+                    capacities[name] -= task["time"]
+                    break
 
-        st.write("Uploading team data...")
-        for _, row in team.iterrows():
-            db.collection("team").document(row["name"]).set(row.to_dict())
-
-        st.write("Sorting and allocating tasks...")
-        tasks = tasks.sort_values(by="priority", ascending=False)
-
-        task_list = []
-        team_cycle = iter(team["name"].tolist())
-        assigned_first = {}
-        skipped = 0
-
-        for _, task in tasks.iterrows():
-            try:
-                person = next(team_cycle)
-            except StopIteration:
-                team_cycle = iter(team["name"].tolist())
-                person = next(team_cycle)
-
-            speed = float(team[team["name"] == person]["speed"].values[0])
-            if person not in assigned_first:
-                if task["difficulty"] >= 4 and speed < 1:
-                    st.write(f"Skipped task {task['id']} for {person} due to difficulty.")
-                    skipped += 1
-                    continue
-                assigned_first[person] = True
-
-            task_data = task.to_dict()
-            task_data["assigned_to"] = person
-            task_data["status"] = "pending"
-            db.collection("tasks").document(task_data["id"]).set(task_data)
-            st.write(f"Assigned task {task_data['id']} to {person}")
-
-        st.success(f"Allocation complete. {len(task_list)} tasks assigned. {skipped} skipped.")
+        st.session_state.assignments = assignments
+        st.success("Tasks allocated. Team members can now view their assignments.")
 
 elif view_mode == "Team Member View":
     st.header("Team Member View")
-    task_df, team_df = load_data()
-    team_names = team_df["name"].tolist()
-    selected_name = st.selectbox("Select your name", team_names)
+    if "assignments" not in st.session_state:
+        st.warning("No tasks have been allocated yet.")
+    else:
+        all_names = list(st.session_state.assignments.keys())
+        selected_name = st.selectbox("Select Your Name", all_names)
 
-    if selected_name:
-        tasks = task_df[(task_df["assigned_to"] == selected_name) & (task_df["status"] != "complete")]
-        tasks = tasks.sort_values(by="priority", ascending=False)
+        if selected_name:
+            st.markdown("<h2 style='color:red;'>Let's get ready to count!</h2>", unsafe_allow_html=True)
+            st.image("boxing_gloves.png", width=150)
 
-        if tasks.empty:
-            st.success("All tasks completed!")
-        else:
-            current = tasks.iloc[0]
-            st.subheader(f"Current Task: {current['id']}")
-            st.write(f"Priority: {current['priority']}, Time: {current['time']} mins, Difficulty: {current['difficulty']}")
+            tasks = st.session_state.assignments[selected_name]
+            if "task_state" not in st.session_state:
+                st.session_state.task_state = {}
 
-            if st.button("Mark as Complete"):
-                db.collection("tasks").document(str(current["id"])).update({
-                    "status": "complete",
-                    "completed_at": datetime.datetime.now().isoformat()
-                })
-                st.success("Marked as complete.")
-                st.rerun()
+            member_state = st.session_state.task_state.setdefault(selected_name, {
+                "current_task": None,
+                "start_time": None,
+                "completed": []
+            })
 
-            total = len(task_df[task_df["assigned_to"] == selected_name])
-            done = len(task_df[(task_df["assigned_to"] == selected_name) & (task_df["status"] == "complete")])
-            progress = done / total if total > 0 else 0
-            st.progress(progress)
+            if member_state["current_task"] is None and len(member_state["completed"]) < len(tasks):
+                next_task = tasks[len(member_state["completed"])]
+                if st.button("Start Next Task"):
+                    member_state["current_task"] = next_task
+                    member_state["start_time"] = time.time()
+
+            if member_state["current_task"]:
+                task = member_state["current_task"]
+                st.subheader(f"Current Task: {task['id']}")
+                st.write(f"Zone: {task['zone']}")
+                st.write(f"Time Allocated: {task['time']} minutes")
+                st.write(f"Difficulty: {task['difficulty']}")
+
+                elapsed = (time.time() - member_state["start_time"]) / 60
+                st.write(f"Time Spent: {elapsed:.1f} minutes")
+
+                if st.button("Complete Task"):
+                    member_state["completed"].append({
+                        "task": task,
+                        "started": datetime.datetime.fromtimestamp(member_state["start_time"]),
+                        "finished": datetime.datetime.now(),
+                        "elapsed": elapsed
+                    })
+                    member_state["current_task"] = None
+                    member_state["start_time"] = None
+
+            # Show progress
+            st.write(f"Progress: {len(member_state['completed'])} of {len(tasks)} tasks completed")
+            st.progress(len(member_state["completed"]) / len(tasks))
