@@ -22,15 +22,27 @@ if view_mode == "Lead View":
         assignments = {name: [] for name in team_df["name"]}
         capacities = dict(zip(team_df["name"], team_df["capacity"]))
 
+        output_rows = []
+
         for _, task in tasks_df.iterrows():
             for name in capacities:
                 if capacities[name] >= task["time"]:
-                    assignments[name].append(task.to_dict())
+                    task_info = task.to_dict()
+                    task_info["assigned_to"] = name
+                    assignments[name].append(task_info)
                     capacities[name] -= task["time"]
+                    output_rows.append(task_info)
                     break
 
         st.session_state.assignments = assignments
-        st.success("Tasks allocated. Team members can now view their assignments.")
+        output_df = pd.DataFrame(output_rows)
+        st.success("Tasks allocated.")
+
+        st.download_button("Download Allocated Tasks CSV", output_df.to_csv(index=False), "allocated_tasks.csv", "text/csv")
+
+        for name, tasks in assignments.items():
+            st.subheader(f"Tasks for {name}")
+            st.write(pd.DataFrame(tasks))
 
 elif view_mode == "Team Member View":
     st.header("Team Member View")
@@ -41,8 +53,7 @@ elif view_mode == "Team Member View":
         selected_name = st.selectbox("Select Your Name", all_names)
 
         if selected_name:
-            st.markdown("<h2 style='color:red;'>LET'S GET READY TO COUNT!</h2>", unsafe_allow_html=True)
-            
+            st.markdown("<h2 style='color:red;'>Let's get ready to count!</h2>", unsafe_allow_html=True)
 
             tasks = st.session_state.assignments[selected_name]
             if "task_state" not in st.session_state:
@@ -53,6 +64,10 @@ elif view_mode == "Team Member View":
                 "start_time": None,
                 "completed": []
             })
+
+            # Show full list of tasks
+            st.subheader("All Tasks Assigned to You (in order):")
+            st.write(pd.DataFrame(tasks)[["id", "zone", "time", "priority", "difficulty"]])
 
             if member_state["current_task"] is None and len(member_state["completed"]) < len(tasks):
                 next_task = tasks[len(member_state["completed"])]
