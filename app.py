@@ -41,8 +41,8 @@ elif view_mode == "Team Member View":
         selected_name = st.selectbox("Select Your Name", all_names)
 
         if selected_name:
-            st.markdown("<h2 style='color:red;'>Let's get ready to count!</h2>", unsafe_allow_html=True)
-            st.image("boxing_gloves.png", width=150)
+            st.markdown("<h2 style='color:red;'>LET'S GET READY TO COUNT!</h2>", unsafe_allow_html=True)
+            
 
             tasks = st.session_state.assignments[selected_name]
             if "task_state" not in st.session_state:
