@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import datetime
 
-st.set_page_config(page_title="Offline Task Allocator", layout="wide")
+st.set_page_config(page_title="Stocktake Task Allocator", layout="wide")
 st.title("Offline Task Allocator & Tracker")
 
 view_mode = st.radio("Select View", ["Lead View", "Team Member View"])
