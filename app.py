@@ -1,100 +1,71 @@
+
 import streamlit as st
 import pandas as pd
-import time
-import datetime
 
-st.set_page_config(page_title="Stocktake Task Allocator", layout="wide")
-st.title("Task Allocator & Tracker")
+st.set_page_config(page_title="Task Allocator", layout="wide")
 
-view_mode = st.radio("Select View", ["Lead View", "Team Member View"])
+def allocate_tasks(team_df, tasks_df):
+    allocation = []
+    team_df = team_df.sort_values(by="speed", ascending=False).copy()
+    tasks_df = tasks_df.sort_values(by=["priority", "difficulty"], ascending=[False, False]).copy()
 
-if view_mode == "Lead View":
-    st.header("Lead View - Allocate Tasks")
-    tasks_file = st.file_uploader("Upload Task File (CSV)", type="csv")
-    team_file = st.file_uploader("Upload Team File (CSV)", type="csv")
+    # Allocate FZ and DY tasks first
+    special_tasks = tasks_df[tasks_df['priority'].isin(['fz', 'dy'])].copy()
+    regular_tasks = tasks_df[~tasks_df['priority'].isin(['fz', 'dy'])].copy()
 
-    if st.button("Allocate Tasks") and tasks_file and team_file:
-        tasks_df = pd.read_csv(tasks_file)
-        team_df = pd.read_csv(team_file)
+    team_zones = {}
+    for i, (_, tm) in enumerate(team_df.iterrows()):
+        team_zones[tm['name']] = []
 
-        tasks_df = tasks_df.sort_values(by=["priority", "difficulty"], ascending=[False, False])
-        team_df["capacity"] = team_df["speed"] * 300  # 5 hours in minutes
-        assignments = {name: [] for name in team_df["name"]}
-        capacities = dict(zip(team_df["name"], team_df["capacity"]))
+    for _, task in special_tasks.iterrows():
+        for i, (_, tm) in enumerate(team_df.iterrows()):
+            allocated_time = sum(t['time'] for t in allocation if t['name'] == tm['name'])
+            if allocated_time + task['time'] <= 300 * tm['speed']:
+                allocation.append({**task, "name": tm['name']})
+                break
 
-        output_rows = []
+    # Assign zones evenly
+    remaining_team = list(team_df['name'])
+    zones = regular_tasks['zone'].unique()
+    zone_assignment = {zone: [] for zone in zones}
+    for i, tm in enumerate(remaining_team):
+        zone = zones[i % len(zones)]
+        zone_assignment[zone].append(tm)
 
-        for _, task in tasks_df.iterrows():
-            for name in capacities:
-                if capacities[name] >= task["time"]:
-                    task_info = task.to_dict()
-                    task_info["assigned_to"] = name
-                    assignments[name].append(task_info)
-                    capacities[name] -= task["time"]
-                    output_rows.append(task_info)
+    for zone, members in zone_assignment.items():
+        zone_tasks = regular_tasks[regular_tasks['zone'] == zone].copy()
+        for _, task in zone_tasks.iterrows():
+            assigned = False
+            for tm_name in members:
+                tm_speed = float(team_df[team_df['name'] == tm_name]['speed'].values[0])
+                allocated_time = sum(t['time'] for t in allocation if t['name'] == tm_name)
+                if task['difficulty'] >= 4 and tm_speed < 1 and len([t for t in allocation if t['name'] == tm_name]) == 0:
+                    continue
+                if allocated_time + task['time'] <= 300 * tm_speed:
+                    allocation.append({**task, "name": tm_name})
+                    assigned = True
                     break
 
-        st.session_state.assignments = assignments
-        output_df = pd.DataFrame(output_rows)
-        st.success("Tasks allocated.")
+    allocated_df = pd.DataFrame(allocation)
+    return allocated_df
 
-        st.download_button("Download Allocated Tasks CSV", output_df.to_csv(index=False), "allocated_tasks.csv", "text/csv")
+st.title("Stocktake Task Allocator")
 
-        for name, tasks in assignments.items():
-            st.subheader(f"Tasks for {name}")
-            st.write(pd.DataFrame(tasks))
+team_file = st.file_uploader("Upload Team CSV", type=["csv"], key="team")
+task_file = st.file_uploader("Upload Tasks CSV", type=["csv"], key="tasks")
 
-elif view_mode == "Team Member View":
-    st.header("Team Member View")
-    if "assignments" not in st.session_state:
-        st.warning("No tasks have been allocated yet.")
+if team_file and task_file:
+    team_df = pd.read_csv(team_file)
+    task_df = pd.read_csv(task_file)
+
+    if "speed" not in team_df.columns or "name" not in team_df.columns:
+        st.error("Team file must have 'name' and 'speed' columns.")
+    elif not all(col in task_df.columns for col in ['id', 'time', 'priority', 'difficulty', 'zone']):
+        st.error("Tasks file must have 'id', 'time', 'priority', 'difficulty', and 'zone' columns.")
     else:
-        all_names = list(st.session_state.assignments.keys())
-        selected_name = st.selectbox("Select Your Name", all_names)
+        allocated_df = allocate_tasks(team_df, task_df)
+        st.success("Tasks Allocated")
+        st.dataframe(allocated_df)
 
-        if selected_name:
-            st.markdown("<h2 style='color:red;'>Let's get ready to count!</h2>", unsafe_allow_html=True)
-
-            tasks = st.session_state.assignments[selected_name]
-            if "task_state" not in st.session_state:
-                st.session_state.task_state = {}
-
-            member_state = st.session_state.task_state.setdefault(selected_name, {
-                "current_task": None,
-                "start_time": None,
-                "completed": []
-            })
-
-            # Show full list of tasks
-            st.subheader("All Tasks Assigned to You (in order):")
-            st.write(pd.DataFrame(tasks)[["id", "zone", "time", "priority", "difficulty"]])
-
-            if member_state["current_task"] is None and len(member_state["completed"]) < len(tasks):
-                next_task = tasks[len(member_state["completed"])]
-                if st.button("Start Next Task"):
-                    member_state["current_task"] = next_task
-                    member_state["start_time"] = time.time()
-
-            if member_state["current_task"]:
-                task = member_state["current_task"]
-                st.subheader(f"Current Task: {task['id']}")
-                st.write(f"Zone: {task['zone']}")
-                st.write(f"Time Allocated: {task['time']} minutes")
-                st.write(f"Difficulty: {task['difficulty']}")
-
-                elapsed = (time.time() - member_state["start_time"]) / 60
-                st.write(f"Time Spent: {elapsed:.1f} minutes")
-
-                if st.button("Complete Task"):
-                    member_state["completed"].append({
-                        "task": task,
-                        "started": datetime.datetime.fromtimestamp(member_state["start_time"]),
-                        "finished": datetime.datetime.now(),
-                        "elapsed": elapsed
-                    })
-                    member_state["current_task"] = None
-                    member_state["start_time"] = None
-
-            # Show progress
-            st.write(f"Progress: {len(member_state['completed'])} of {len(tasks)} tasks completed")
-            st.progress(len(member_state["completed"]) / len(tasks))
+        csv_output = allocated_df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Allocation CSV", csv_output, "allocation.csv", "text/csv")
